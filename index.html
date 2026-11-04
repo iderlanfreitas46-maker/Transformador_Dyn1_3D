@@ -1,0 +1,860 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
+<title>Transformador Dyn1 3D</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: palco 3D em tela cheia; barra de cena no topo-esquerda, painel técnico estreito à direita, controles na base */
+:root{
+  --bg:#070c12; --ink:#e7edf3; --mut:#8ea2b4; --line:rgba(160,190,215,.18);
+  --glass:rgba(9,15,22,.74); --amber:#ffb347; --cyan:#4cc9f0; --ok:#5ee08a;
+  --pa:#ff6b5e; --pb:#ffd34d; --pc:#4aa8ff;
+  --f-disp:"Barlow Condensed","Arial Narrow",sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block}
+.lbl{font-family:var(--f-mono);font-size:11px;color:var(--ink);background:rgba(7,12,18,.72);border:1px solid var(--line);border-left:2px solid var(--amber);padding:3px 7px;border-radius:3px;white-space:nowrap;pointer-events:none;transition:opacity .5s}
+.lbl b{color:var(--amber);font-weight:500}
+.lbl.at{border-left-color:var(--cyan)} .lbl.at b{color:var(--cyan)}
+.lbl.hide{opacity:0}
+header.top{position:fixed;top:env(safe-area-inset-top,0px);left:0;right:0;padding:14px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));display:flex;justify-content:space-between;align-items:flex-start;gap:16px;pointer-events:none}
+.brand{max-width:min(620px,62vw)}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
+h1{font-family:var(--f-disp);font-weight:700;font-size:clamp(18px,2.1vw,27px);line-height:1.02;margin:4px 0 0;letter-spacing:.01em;text-wrap:balance;text-shadow:0 2px 16px rgba(0,0,0,.6)}
+h1 span{color:var(--amber)}
+.spec{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.spec span{font-family:var(--f-mono);font-size:11px;padding:3px 7px;border:1px solid var(--line);border-radius:3px;background:rgba(7,12,18,.55)}
+.sig{font-family:var(--f-mono);font-size:11px;color:var(--mut);text-align:right;line-height:1.5}
+.sig b{display:block;color:var(--ink);font-family:var(--f-disp);font-size:16px;font-weight:600;letter-spacing:.02em}
+
+#scenecap{position:fixed;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(86px + env(safe-area-inset-bottom,0px));max-width:min(420px,52vw);pointer-events:none}
+#scenecap .n{font-family:var(--f-mono);font-size:12px;color:var(--amber);letter-spacing:.12em}
+#scenecap h2{font-family:var(--f-disp);font-weight:700;font-size:clamp(22px,2.8vw,36px);line-height:1;margin:2px 0 6px;text-transform:uppercase;text-shadow:0 2px 18px rgba(0,0,0,.7)}
+#scenecap p{margin:0;font-size:14px;line-height:1.45;color:#cfd9e2;text-shadow:0 1px 8px rgba(0,0,0,.9)}
+
+#panel{position:fixed;right:max(16px,env(safe-area-inset-right,0px));top:calc(110px + env(safe-area-inset-top,0px));width:330px;max-height:calc(100% - 220px);overflow:auto;background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:8px;padding:14px 16px;font-size:13px;line-height:1.45}
+#panel h3{font-family:var(--f-disp);font-size:18px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;margin:0 0 8px;color:var(--ink)}
+#panel h4{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);margin:12px 0 6px;font-weight:500}
+#panel p{margin:6px 0}
+#panel ul{margin:6px 0;padding-left:18px} #panel li{margin:3px 0}
+.kv{display:grid;grid-template-columns:1fr auto;gap:3px 12px;font-family:var(--f-mono);font-size:12px;font-variant-numeric:tabular-nums}
+.kv span:nth-child(even){text-align:right;color:var(--ink)} .kv span:nth-child(odd){color:var(--mut)}
+.big{font-family:var(--f-mono);font-size:22px;color:var(--amber);font-variant-numeric:tabular-nums}
+.note{font-size:11.5px;color:var(--mut);border-top:1px solid var(--line);padding-top:8px;margin-top:10px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.ctl{display:grid;gap:4px;margin:8px 0}
+.ctl label{font-family:var(--f-mono);font-size:11px;color:var(--mut);display:flex;justify-content:space-between}
+.ctl label output{color:var(--ink)}
+input[type=range]{width:100%;accent-color:var(--amber)}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.row3 input,.inp{width:100%;box-sizing:border-box;background:#0d1620;border:1px solid var(--line);color:var(--ink);border-radius:4px;padding:5px 6px;font-family:var(--f-mono);font-size:12px}
+.row3 span{font-family:var(--f-mono);font-size:10px;color:var(--mut)}
+canvas.wave{width:100%;height:120px;display:block;background:#0a121a;border:1px solid var(--line);border-radius:4px}
+svg.clock{width:100%;height:auto;display:block}
+.eq{font-family:var(--f-mono);font-size:12.5px;background:#0a121a;border:1px solid var(--line);border-radius:4px;padding:8px 10px;margin:6px 0;line-height:1.6}
+.eq b{color:var(--amber);font-weight:500}
+
+nav.bar{position:fixed;left:0;right:0;bottom:0;padding:10px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:linear-gradient(to top,rgba(5,9,14,.92),rgba(5,9,14,0))}
+.btn{appearance:none;border:1px solid var(--line);background:rgba(14,22,31,.85);color:var(--ink);font-family:var(--f-mono);font-size:12px;padding:8px 12px;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--amber)} .btn:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.btn.on{background:var(--amber);color:#1a1206;border-color:var(--amber)}
+.scenes{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
+.scenes .btn{padding:8px 10px}
+.prog{position:absolute;left:0;right:0;top:0;height:2px;background:rgba(255,255,255,.06)}
+.prog i{display:block;height:100%;width:0;background:var(--amber)}
+#togglePanel{display:none}
+@media (max-width:760px){
+  #panel{left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));width:auto;top:auto;bottom:calc(112px + env(safe-area-inset-bottom,0px));max-height:42%}
+  .scenes{order:5;flex-basis:100%;display:grid;grid-template-columns:repeat(7,1fr)}
+  .scenes .btn{justify-content:center;padding:8px 0}
+  nav.bar .btn{padding:8px 10px}
+  #panel.closed{display:none}
+  #togglePanel{display:inline-flex}
+  #scenecap{bottom:calc(112px + env(safe-area-inset-bottom,0px));max-width:none;right:max(16px,env(safe-area-inset-right,0px))}
+  #scenecap p{font-size:13px}
+  body.panel-open #scenecap{display:none}
+  .sig{display:none} .brand{max-width:100%}
+  .scenes .btn .t{display:none}
+}
+@media (prefers-reduced-motion:reduce){.lbl{transition:none}}
+#loading{position:fixed;inset:0;display:grid;place-items:center;font-family:var(--f-mono);color:var(--mut);font-size:13px;background:var(--bg);transition:opacity .6s}
+#loading.gone{opacity:0;pointer-events:none}
+</style>
+
+<div id="stage"></div>
+<div id="loading">Carregando o modelo 3D do transformador…</div>
+
+<header class="top">
+  <div class="brand">
+    <div class="eyebrow">Simulador · Subestação de refinaria</div>
+    <h1>Transformador de potência – <span>princípio de funcionamento e grupo vetorial Dyn1</span></h1>
+    <div class="spec"><span>AT 13.800 V Δ</span><span>BT 480 V Y + N</span><span>Dyn1</span><span>Z ≈ 6,5%</span><span>2.500 kVA ONAN</span><span>TAP ±2×2,5%</span></div>
+  </div>
+  <div class="sig"><b>Iderlan Freitas</b>Engenheiro Eletricista</div>
+</header>
+
+<div id="scenecap"><div class="n" id="capN">CENA 1 / 7</div><h2 id="capT">Visualização externa</h2><p id="capP"></p></div>
+
+<aside id="panel" aria-live="polite"></aside>
+
+<nav class="bar">
+  <div class="prog"><i id="progBar"></i></div>
+  <button class="btn" id="bPlay" aria-label="Pausar">❚❚ <span class="t">Pausar</span></button>
+  <button class="btn" id="bRestart" aria-label="Reiniciar">↺ <span class="t">Reiniciar</span></button>
+  <button class="btn on" id="bTour" aria-pressed="true">▶▶ <span class="t">Tour</span></button>
+  <div class="scenes" id="scenes"></div>
+  <button class="btn" id="togglePanel">Detalhes</button>
+</nav>
+
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+/* ===================== DADOS DO EQUIPAMENTO ===================== */
+const V1L = 13800, V2L = 480, Z = 0.065;
+const V2F = V2L/Math.sqrt(3);          // 277,13 V
+const RL = V1L/V2L;                    // 28,75
+const RF = V1L/V2F;                    // 49,80 (espiras por fase)
+const fmt = (x,d=0)=>x.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const PH = ['#ff6b5e','#ffd34d','#4aa8ff'];
+
+/* ===================== RENDERER / CENA ===================== */
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:'high-performance', preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));
+renderer.setSize(innerWidth,innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.localClippingEnabled = true;
+stage.appendChild(renderer.domElement);
+
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(innerWidth,innerHeight);
+Object.assign(labelRenderer.domElement.style,{position:'absolute',inset:'0',pointerEvents:'none'});
+stage.appendChild(labelRenderer.domElement);
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.fog = new THREE.FogExp2(0x2a2b31, 0.034);
+
+const camera = new THREE.PerspectiveCamera(38, innerWidth/innerHeight, 0.05, 400);
+camera.position.set(6.2,3.2,7.2);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0,1.2,0);
+controls.enableDamping = true; controls.dampingFactor = 0.07;
+controls.minDistance = 0.6; controls.maxDistance = 30;
+controls.maxPolarAngle = Math.PI*0.495;
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene,camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight), 0.75, 0.55, 0.82);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+/* céu de crepúsculo */
+{
+  const g = new THREE.SphereGeometry(200,32,16);
+  const m = new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,uniforms:{},
+    vertexShader:`varying vec3 p;void main(){p=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+    fragmentShader:`varying vec3 p;void main(){float h=p.y;
+      vec3 top=vec3(.02,.05,.10),mid=vec3(.07,.14,.24),hor=vec3(.42,.28,.20);
+      vec3 c=mix(hor,mid,smoothstep(-.02,.12,h));c=mix(c,top,smoothstep(.12,.6,h));
+      gl_FragColor=vec4(c,1.);}`});
+  scene.add(new THREE.Mesh(g,m));
+}
+
+/* luzes */
+scene.add(new THREE.HemisphereLight(0x8fb4d9,0x2a2118,0.55));
+const sun = new THREE.DirectionalLight(0xffd7ad,2.3);
+sun.position.set(-6,9,7); sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-5,right:5,top:5,bottom:-5,near:1,far:30});
+sun.shadow.bias=-0.0004; sun.shadow.normalBias=0.02;
+scene.add(sun);
+const rim = new THREE.DirectionalLight(0x6fb8ff,1.2); rim.position.set(6,4,-7); scene.add(rim);
+const inner = new THREE.PointLight(0xfff1dc,0,5,1.6); inner.position.set(0.3,1.95,1.7); scene.add(inner);
+
+/* ===================== TEXTURAS PROCEDURAIS ===================== */
+function canvasTex(w,h,draw,rep=[1,1],srgb=true){
+  const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');draw(x,w,h);
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rep[0],rep[1]);
+  t.anisotropy=renderer.capabilities.getMaxAnisotropy(); if(srgb)t.colorSpace=THREE.SRGBColorSpace; return t;
+}
+const rnd=(a,b)=>a+Math.random()*(b-a);
+function noise(x,w,h,a,n=4000,col='0,0,0'){for(let i=0;i<n;i++){x.fillStyle=`rgba(${col},${Math.random()*a})`;x.fillRect(Math.random()*w,Math.random()*h,rnd(1,3),rnd(1,3));}}
+
+const texPaint = canvasTex(512,512,(x,w,h)=>{x.fillStyle='#8f989f';x.fillRect(0,0,w,h);noise(x,w,h,.06,9000);noise(x,w,h,.05,5000,'255,255,255');
+  for(let i=0;i<14;i++){x.fillStyle=`rgba(70,52,30,${rnd(.02,.06)})`;x.fillRect(rnd(0,w),rnd(0,h),rnd(2,6),rnd(20,90));}},[2,2]);
+const texGravel = canvasTex(512,512,(x,w,h)=>{x.fillStyle='#4b4b48';x.fillRect(0,0,w,h);
+  for(let i=0;i<9000;i++){const g=rnd(40,140);x.fillStyle=`rgb(${g},${g*.97},${g*.92})`;x.beginPath();x.arc(rnd(0,w),rnd(0,h),rnd(1,3.2),0,7);x.fill();}},[30,30]);
+const texConcrete = canvasTex(512,512,(x,w,h)=>{x.fillStyle='#8c8a84';x.fillRect(0,0,w,h);noise(x,w,h,.12,14000);noise(x,w,h,.08,6000,'255,255,255');},[2,2]);
+// laminação do núcleo (linhas finas)
+function lamTex(vertical){return canvasTex(512,512,(x,w,h)=>{x.fillStyle='#7d858c';x.fillRect(0,0,w,h);
+  for(let i=0;i<512;i+=3){const g=rnd(95,150);x.fillStyle=`rgb(${g},${g+4},${g+10})`; vertical?x.fillRect(i,0,2,h):x.fillRect(0,i,w,2);}
+  noise(x,w,h,.08,3000);},[1,1]);}
+const texLamV = lamTex(true), texLamH = lamTex(false);
+// cobre: discos (AT) e camadas (BT)
+function copperTex(discs,gap){return canvasTex(128,1024,(x,w,h)=>{
+  x.fillStyle='#b8693c';x.fillRect(0,0,w,h);
+  const dh=h/discs;
+  for(let d=0;d<discs;d++){const y0=d*dh;
+    for(let k=0;k<dh-gap;k+=4){const g=rnd(-18,18);x.fillStyle=`rgb(${190+g},${110+g*.6},${62+g*.4})`;x.fillRect(0,y0+k,w,3);x.fillStyle='rgba(60,25,10,.45)';x.fillRect(0,y0+k+3,w,1);}
+    x.fillStyle='#3a2414';x.fillRect(0,y0+dh-gap,w,gap);
+  }},[6,1]);}
+const texHV = copperTex(26,6), texLV = copperTex(8,3);
+// seção transversal: condutores + papel
+function sectionTex(cols,rows){return canvasTex(256,1024,(x,w,h)=>{x.fillStyle='#d9c08a';x.fillRect(0,0,w,h);
+  const cw=w/cols,rh=h/rows;for(let i=0;i<cols;i++)for(let j=0;j<rows;j++){const g=rnd(-15,15);x.fillStyle=`rgb(${196+g},${112+g},${60+g})`;x.fillRect(i*cw+2,j*rh+2,cw-4,rh-4);}
+  },[1,1]);}
+const texSecHV = sectionTex(6,60), texSecLV = sectionTex(3,36);
+const texPress = canvasTex(256,256,(x,w,h)=>{x.fillStyle='#c7a266';x.fillRect(0,0,w,h);noise(x,w,h,.12,5000,'90,60,20');},[4,2]);
+const texPorc = canvasTex(64,64,(x,w,h)=>{x.fillStyle='#5a2a1a';x.fillRect(0,0,w,h);noise(x,w,h,.1,300);},[1,1]);
+const glowTex = canvasTex(64,64,(x,w,h)=>{const g=x.createRadialGradient(32,32,0,32,32,32);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.25,'rgba(255,255,255,.8)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,w,h);});
+
+/* ===================== MATERIAIS ===================== */
+const M = {
+  paint: new THREE.MeshPhysicalMaterial({color:0xaab3ba,map:texPaint,metalness:.55,roughness:.42,clearcoat:.35,clearcoatRoughness:.4}),
+  paintDark: new THREE.MeshStandardMaterial({color:0x6c757d,metalness:.6,roughness:.5}),
+  steel: new THREE.MeshStandardMaterial({color:0xc9cfd4,metalness:.9,roughness:.28}),
+  clamp: new THREE.MeshStandardMaterial({color:0xa9843c,metalness:.45,roughness:.55}),
+  porc: new THREE.MeshPhysicalMaterial({color:0x6a2c18,map:texPorc,metalness:0,roughness:.12,clearcoat:1,clearcoatRoughness:.05}),
+  porcBT: new THREE.MeshPhysicalMaterial({color:0x7a3a22,metalness:0,roughness:.18,clearcoat:.8}),
+  press: new THREE.MeshStandardMaterial({color:0xd2ad70,map:texPress,roughness:.85,transparent:true,opacity:.9,side:THREE.DoubleSide}),
+  wood: new THREE.MeshStandardMaterial({color:0x8a5a2b,roughness:.8}),
+  gravel: new THREE.MeshStandardMaterial({map:texGravel,roughness:1}),
+  concrete: new THREE.MeshStandardMaterial({map:texConcrete,roughness:.95}),
+  cuLead: new THREE.MeshStandardMaterial({color:0xc77a45,metalness:.95,roughness:.28}),
+  paperLead: new THREE.MeshStandardMaterial({color:0xd9c79a,roughness:.75}),
+  dark: new THREE.MeshStandardMaterial({color:0x22282e,metalness:.6,roughness:.5}),
+};
+// plano de corte do tanque (frente)
+const cutPlane = new THREE.Plane(new THREE.Vector3(0,-1,0), 5);
+const M_front = M.paint.clone(); M_front.clippingPlanes=[cutPlane]; M_front.side=THREE.DoubleSide;
+const M_frontDark = M.paintDark.clone(); M_frontDark.clippingPlanes=[cutPlane];
+
+/* ===================== GEOMETRIA DO EQUIPAMENTO ===================== */
+const T = new THREE.Group(); scene.add(T);          // transformador completo
+const tank = new THREE.Group(); T.add(tank);
+const active = new THREE.Group(); T.add(active);      // parte ativa
+const env = new THREE.Group(); scene.add(env);
+const S = (m)=>{m.castShadow=true;m.receiveShadow=true;return m;};
+
+const TW=2.5, TD=1.34, TY0=0.2, TY1=2.12, TH=TY1-TY0, WT=0.014;
+const LEGX=[-0.74,0,0.74], CR=0.168;         // eixo das colunas, raio do núcleo
+const LEG_Y0=0.62, LEG_Y1=1.62, YK=0.24;     // janela e altura das culatras
+const CY=(LEG_Y0+LEG_Y1)/2;                  // centro das bobinas
+const LV={ri:0.192,ro:0.246}, INS={ri:0.256,ro:0.266}, HV={ri:0.276,ro:0.345};
+const COIL_H=0.92;
+
+// --- base e entorno ---
+{
+  const ground=new THREE.Mesh(new THREE.PlaneGeometry(120,120),M.gravel);ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;env.add(ground);
+  const pad=S(new THREE.Mesh(new THREE.BoxGeometry(4.6,0.14,3.4),M.concrete));pad.position.y=0.07;env.add(pad);
+  // bacia de contenção de óleo
+  for(const [w,d,x,z] of [[4.6,0.12,0,1.64],[4.6,0.12,0,-1.64],[0.12,3.4,2.24,0],[0.12,3.4,-2.24,0]]){const c=S(new THREE.Mesh(new THREE.BoxGeometry(w,0.32,d),M.concrete));c.position.set(x,0.16,z);env.add(c);}
+  // trilhos/skid
+  for(const z of [-0.45,0.45]){const b=S(new THREE.Mesh(new THREE.BoxGeometry(2.7,0.08,0.16),M.paintDark));b.position.set(0,0.18,z);env.add(b);}
+  // cerca da subestação
+  const fenceM=new THREE.MeshStandardMaterial({color:0x8a949c,metalness:.8,roughness:.4});
+  const meshM=new THREE.MeshStandardMaterial({color:0x9aa4ab,metalness:.6,roughness:.5,transparent:true,opacity:.18,side:THREE.DoubleSide,alphaMap:canvasTex(64,64,(x,w,h)=>{x.fillStyle='#000';x.fillRect(0,0,w,h);x.strokeStyle='#fff';x.lineWidth=3;x.beginPath();x.moveTo(0,0);x.lineTo(w,h);x.moveTo(w,0);x.lineTo(0,h);x.stroke();},[60,3],false)});
+  const R=7.5;
+  for(let i=-8;i<=8;i++){const p=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,2.4,8),fenceM);p.position.set(i*1.0,1.2,-R);env.add(p);}
+  const net=new THREE.Mesh(new THREE.PlaneGeometry(16,2.3),meshM);net.position.set(0,1.2,-R);env.add(net);
+  // refinaria ao fundo (silhuetas)
+  const ref=new THREE.MeshStandardMaterial({color:0x3a4552,metalness:.5,roughness:.6});
+  const lightM=new THREE.MeshBasicMaterial({color:0xffc477});
+  const addLights=(x,z,h)=>{for(let y=3;y<h;y+=4){const l=new THREE.Mesh(new THREE.SphereGeometry(.09,8,6),lightM);l.position.set(x+.75,y,z);env.add(l);}};
+  [[-18,-34,22,1.4],[-14,-36,30,1.9],[-9,-33,18,1.2],[12,-38,26,1.6],[16,-35,16,1.1]].forEach(([x,z,h,r])=>{
+    const c=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,24),ref);c.position.set(x,h/2,z);env.add(c);
+    for(let y=4;y<h;y+=5){const pl=new THREE.Mesh(new THREE.TorusGeometry(r+.35,.06,6,24),ref);pl.rotation.x=Math.PI/2;pl.position.set(x,y,z);env.add(pl);}
+    addLights(x,z,h);});
+  [[2,-30,4.5],[8,-31,4]].forEach(([x,z,r])=>{const s=new THREE.Mesh(new THREE.SphereGeometry(r,32,20),ref);s.position.set(x,r+1.4,z);env.add(s);});
+  [[-26,-28,7,10],[24,-27,6,8]].forEach(([x,z,r,h])=>{const t=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,32),ref);t.position.set(x,h/2,z);env.add(t);});
+  // rack de tubulação
+  for(let i=-6;i<=6;i++){const p=new THREE.Mesh(new THREE.BoxGeometry(.25,6,.25),ref);p.position.set(i*3,3,-24);env.add(p);}
+  for(const y of [5.2,5.8]){const p=new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,40,12),ref);p.rotation.z=Math.PI/2;p.position.set(0,y,-24);env.add(p);}
+  // tocha (flare)
+  const fl=new THREE.Mesh(new THREE.CylinderGeometry(.35,.5,40,12),ref);fl.position.set(-30,20,-48);env.add(fl);
+  const flame=new THREE.Mesh(new THREE.SphereGeometry(1.4,16,12),new THREE.MeshBasicMaterial({color:0xffa040}));flame.position.set(-30,41.3,-48);flame.scale.set(1,1.8,1);env.add(flame);env.userData.flame=flame;
+  const fLight=new THREE.PointLight(0xff8a3a,40,90,1.2);fLight.position.set(-30,40,-46);env.add(fLight);env.userData.fLight=fLight;
+}
+
+// --- tanque ---
+function box(w,h,d,mat,x,y,z,parent=tank,rounded=false){const g=rounded?new RoundedBoxGeometry(w,h,d,2,Math.min(w,h,d)/3):new THREE.BoxGeometry(w,h,d);const m=S(new THREE.Mesh(g,mat));m.position.set(x,y,z);parent.add(m);return m;}
+const ty=TY0+TH/2;
+box(TW,TH,WT,M.paint,0,ty,-TD/2);                     // traseira
+box(WT,TH,TD,M.paint,-TW/2,ty,0);  box(WT,TH,TD,M.paint,TW/2,ty,0);
+box(TW,WT,TD,M.paint,0,TY0,0);                        // fundo
+const front = box(TW,TH,WT,M_front,0,ty,TD/2);        // frente (cortável)
+// tampa com flange e parafusos
+box(TW+0.12,0.05,TD+0.12,M.paint,0,TY1+0.025,0,tank,true);
+box(TW+0.1,0.035,TD+0.1,M.paintDark,0,TY1-0.02,0);
+{
+  const bolt=new THREE.CylinderGeometry(.013,.013,.03,6);const n=60;const inst=new THREE.InstancedMesh(bolt,M.steel,n*2);let k=0;const mm=new THREE.Matrix4();
+  for(let i=0;i<n;i++){const x=-TW/2-0.03+(TW+0.06)*i/(n-1);for(const z of [TD/2+0.035,-TD/2-0.035]){mm.makeTranslation(x,TY1+0.06,z);inst.setMatrixAt(k++,mm);}}
+  tank.add(inst);
+}
+// nervuras verticais (frente e trás)
+const ribsFront=[];
+for(let i=0;i<5;i++){const x=-0.96+i*0.48;
+  ribsFront.push(box(0.05,TH-0.1,0.06,M_frontDark,x,ty,TD/2+0.03));
+  box(0.05,TH-0.1,0.06,M.paintDark,x,ty,-TD/2-0.03);}
+// placa de identificação (frente)
+const plateTex = canvasTex(512,320,(x,w,h)=>{x.fillStyle='#d8dde0';x.fillRect(0,0,w,h);x.strokeStyle='#333';x.lineWidth=6;x.strokeRect(6,6,w-12,h-12);
+  x.fillStyle='#111';x.font='bold 30px sans-serif';x.fillText('TRANSFORMADOR TRIFÁSICO',24,52);x.font='22px monospace';
+  ['POTÊNCIA  2.500 kVA   ONAN','AT  13.800 V (Δ)  ±2×2,5 %','BT    480 V (Y + N)','GRUPO  Dyn1    Z ≈ 6,5 %','FREQ.  60 Hz','TAP: SEM CARGA – 5 POSIÇÕES'].forEach((s,i)=>x.fillText(s,28,100+i*36));},[1,1]);
+const plate = new THREE.Mesh(new THREE.PlaneGeometry(.42,.26),new THREE.MeshStandardMaterial({map:plateTex,metalness:.4,roughness:.4,clippingPlanes:[cutPlane]}));
+plate.position.set(0.72,0.74,TD/2+0.065);tank.add(plate);
+
+// radiadores (laterais)
+function radiatorBank(side){
+  const g=new THREE.Group();const finG=new THREE.BoxGeometry(0.46,1.36,0.012);const n=21;
+  const inst=new THREE.InstancedMesh(finG,M.paint,n);inst.castShadow=true;inst.receiveShadow=true;const mm=new THREE.Matrix4();
+  for(let i=0;i<n;i++){mm.makeTranslation(0,0,-0.55+1.1*i/(n-1));inst.setMatrixAt(i,mm);}g.add(inst);
+  for(const y of [0.72,-0.72]){const h=S(new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,1.18,16),M.paint));h.rotation.x=Math.PI/2;h.position.set(-side*0.12,y,0);g.add(h);
+    const c=S(new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,.32,16),M.paint));c.rotation.z=Math.PI/2;c.position.set(-side*0.32,y,0);g.add(c);}
+  // válvulas
+  for(const y of [0.72,-0.72]){const v=S(new THREE.Mesh(new THREE.CylinderGeometry(.065,.065,.04,20),M.paintDark));v.rotation.z=Math.PI/2;v.position.set(-side*0.43,y,0);g.add(v);}
+  g.position.set(side*(TW/2+0.5),ty+0.02,0);tank.add(g);return g;
+}
+radiatorBank(1);radiatorBank(-1);
+
+// conservador + Buchholz
+{
+  const cons=S(new THREE.Mesh(new THREE.CylinderGeometry(.24,.24,1.1,40),M.paint));cons.rotation.z=Math.PI/2;cons.position.set(0.55,TY1+0.78,-0.42);tank.add(cons);
+  for(const s of [-1,1]){const cap=S(new THREE.Mesh(new THREE.SphereGeometry(.24,32,16,0,Math.PI*2,0,Math.PI/2),M.paint));cap.rotation.z=-s*Math.PI/2;cap.scale.set(1,.25,1);cap.position.set(0.55+s*0.55,TY1+0.78,-0.42);tank.add(cap);}
+  for(const x of [0.2,0.9]){box(0.06,0.55,0.06,M.paintDark,x,TY1+0.33,-0.42);}
+  const pipe=S(new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,.5,12),M.paint));pipe.position.set(0.1,TY1+0.33,-0.25);pipe.rotation.x=0.5;tank.add(pipe);
+  const bh=box(0.14,0.12,0.12,M.paintDark,0.1,TY1+0.33,-0.27);
+  const gauge=S(new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.03,24),M.steel));gauge.rotation.z=Math.PI/2;gauge.position.set(1.12,TY1+0.78,-0.42);tank.add(gauge);
+  // secador de sílica
+  const sil=S(new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,.22,16),new THREE.MeshPhysicalMaterial({color:0xe07a2a,transparent:true,opacity:.85,roughness:.2})));sil.position.set(TW/2+0.06,1.0,-0.5);tank.add(sil);
+}
+
+// buchas (perfil por torno)
+function bushing(H,sheds,rBase,rShed,mat){
+  const pts=[];pts.push(new THREE.Vector2(0,0),new THREE.Vector2(rBase*1.5,0),new THREE.Vector2(rBase*1.5,.04),new THREE.Vector2(rBase,.05));
+  const h0=.06,step=(H-.12)/sheds;
+  for(let i=0;i<sheds;i++){const y=h0+i*step;pts.push(new THREE.Vector2(rBase,y),new THREE.Vector2(rShed,y+step*.35),new THREE.Vector2(rShed*.96,y+step*.5),new THREE.Vector2(rBase,y+step*.62));}
+  pts.push(new THREE.Vector2(rBase*.9,H-.05),new THREE.Vector2(rBase*.5,H),new THREE.Vector2(0,H));
+  const g=new THREE.Group();g.add(S(new THREE.Mesh(new THREE.LatheGeometry(pts,40),mat)));
+  const flange=S(new THREE.Mesh(new THREE.CylinderGeometry(rBase*1.9,rBase*1.9,.03,24),M.steel));flange.position.y=.015;g.add(flange);
+  const stud=S(new THREE.Mesh(new THREE.CylinderGeometry(.016,.016,.12,12),M.cuLead));stud.position.y=H+.05;g.add(stud);
+  return g;
+}
+const HVB=[],LVB=[];
+LEGX.forEach((x,i)=>{const b=bushing(0.78,10,0.055,0.11,M.porc);b.position.set(x,TY1+0.05,-0.12);tank.add(b);HVB.push(b);});
+[-0.66,-0.22,0.22,0.66].forEach((x,i)=>{const b=bushing(0.3,4,0.04,0.075,M.porcBT);b.position.set(x,TY1+0.05,0.42);tank.add(b);LVB.push(b);});
+// TAP: punho do comutador na tampa
+const tapHandle=new THREE.Group();{const b=S(new THREE.Mesh(new THREE.CylinderGeometry(.06,.07,.08,20),M.paintDark));tapHandle.add(b);
+  const k=S(new THREE.Mesh(new THREE.BoxGeometry(.16,.025,.035),M.steel));k.position.y=.06;tapHandle.add(k);tapHandle.position.set(-1.0,TY1+0.09,0.36);tank.add(tapHandle);}
+
+/* ---------- parte ativa ---------- */
+// núcleo escalonado (degraus aproximando seção circular)
+const STEPS=[0.32,0.27,0.2,0.11];
+const halfD=w=>Math.sqrt(Math.max(CR*CR-(w/2)*(w/2),0));
+const coreMats=[0,1,2].map(()=>new THREE.MeshStandardMaterial({color:0x9aa3ab,map:texLamV,metalness:.75,roughness:.32,emissive:0xff6a1a,emissiveIntensity:0,transparent:true,opacity:1}));
+const yokeMat=new THREE.MeshStandardMaterial({color:0x9aa3ab,map:texLamH,metalness:.75,roughness:.32,emissive:0xff6a1a,emissiveIntensity:0,transparent:true,opacity:1});
+const coreGroup=new THREE.Group();active.add(coreGroup);
+const yTop=LEG_Y1+YK/2, yBot=LEG_Y0-YK/2;
+LEGX.forEach((x,i)=>STEPS.forEach(w=>{const m=S(new THREE.Mesh(new THREE.BoxGeometry(w,LEG_Y1-LEG_Y0,halfD(w)*2),coreMats[i]));m.position.set(x,CY,0);coreGroup.add(m);}));
+for(const yc of [yTop,yBot]) STEPS.forEach(w=>{const len=LEGX[2]-LEGX[0]+0.32+ (w-0.11)*0;const m=S(new THREE.Mesh(new THREE.BoxGeometry(LEGX[2]-LEGX[0]+0.32,Math.min(w,YK),halfD(w)*2),yokeMat));m.position.set(0,yc,0);coreGroup.add(m);});
+// ferragens de aperto (amarelas), travessas e tirantes
+const clampG=new THREE.Group();active.add(clampG);
+for(const yc of [yTop,yBot]) for(const s of [-1,1]){
+  const ed=yc>CY?1:-1;
+  box(1.92,0.07,0.03,M.clamp,0,yc+ed*0.085,s*(CR+0.03),clampG);
+  box(1.92,0.03,0.08,M.clamp,0,yc+ed*0.125,s*(CR+0.06),clampG);
+}
+LEGX.concat([-1.0,1.0]).forEach(x=>{for(const yc of [yTop,yBot]){const r=S(new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.48,8),M.steel));r.rotation.x=Math.PI/2;r.position.set(x+(Math.abs(x)<0.9?0.2:0),yc+0.06,0);clampG.add(r);}});
+for(const s of [-1,1]){const v=box(0.06,yTop-yBot+0.2,0.05,M.clamp,s*1.0,CY,CR+0.05,clampG);}
+// calços de madeira (blocos de suporte das bobinas)
+LEGX.forEach(x=>{for(let a=0;a<8;a++){const t=a/8*Math.PI*2+Math.PI/8;for(const y of [LEG_Y0+0.005,LEG_Y1-0.005]){const b=S(new THREE.Mesh(new THREE.BoxGeometry(.05,.035,.16),M.wood));b.position.set(x+Math.sin(t)*0.27,y,Math.cos(t)*0.27);b.rotation.y=t;clampG.add(b);}}});
+
+// ---- bobinas com corte em cunha (setor removido) ----
+const coilMat={
+  hv: ()=>new THREE.MeshPhysicalMaterial({color:0xd08250,map:texHV,bumpMap:texHV,bumpScale:1.2,metalness:.95,roughness:.3,emissive:0x3a9cff,emissiveIntensity:0,side:THREE.DoubleSide,transparent:true,opacity:1}),
+  lv: ()=>new THREE.MeshPhysicalMaterial({color:0xd08a55,map:texLV,bumpMap:texLV,bumpScale:1.2,metalness:.95,roughness:.28,emissive:0xff9a2a,emissiveIntensity:0,side:THREE.DoubleSide,transparent:true,opacity:1}),
+};
+const secMatHV=new THREE.MeshStandardMaterial({map:texSecHV,roughness:.5,metalness:.3,side:THREE.DoubleSide,transparent:true});
+const secMatLV=new THREE.MeshStandardMaterial({map:texSecLV,roughness:.5,metalness:.3,side:THREE.DoubleSide,transparent:true});
+function sectorTube(ri,ro,h,open,mat,secMat){
+  const g=new THREE.Group();const st=open/2, len=Math.PI*2-open, seg=Math.max(24,Math.round(96*len/(Math.PI*2)));
+  const o=new THREE.Mesh(new THREE.CylinderGeometry(ro,ro,h,seg,1,true,st,len),mat);
+  const i=new THREE.Mesh(new THREE.CylinderGeometry(ri,ri,h,seg,1,true,st,len),mat);
+  [o,i].forEach(m=>{m.castShadow=true;m.receiveShadow=true;g.add(m);});
+  for(const y of [h/2,-h/2]){const r=new THREE.Mesh(new THREE.RingGeometry(ri,ro,seg,1,st-Math.PI/2,len),secMat);r.rotation.x=-Math.PI/2;r.position.y=y;r.rotation.z=0;g.add(r);
+    // RingGeometry gira no plano XY; após rotação -90° em X o ângulo fica alinhado ao cilindro
+  }
+  if(open>0.001){for(const th of [st,st+len]){const p=new THREE.Mesh(new THREE.PlaneGeometry(ro-ri,h),secMat);const rm=(ri+ro)/2;p.position.set(Math.sin(th)*rm,0,Math.cos(th)*rm);p.rotation.y=th-Math.PI/2;g.add(p);}}
+  return g;
+}
+const coils=[];  // por coluna {hv,lv,ins,hvMat,lvMat,holder}
+LEGX.forEach((x,i)=>{
+  const holder=new THREE.Group();holder.position.set(x,CY,0);active.add(holder);
+  coils.push({holder,hvMat:coilMat.hv(),lvMat:coilMat.lv(),open:-1,x});
+});
+const insMat=M.press.clone();insMat.emissive=new THREE.Color(0xffb347);insMat.emissiveIntensity=0;
+function buildCoils(open){
+  coils.forEach(c=>{
+    if(Math.abs(c.open-open)<1e-4)return;c.open=open;
+    c.holder.children.slice().forEach(ch=>{c.holder.remove(ch);ch.traverse(o=>o.geometry&&o.geometry.dispose());});
+    c.holder.add(sectorTube(LV.ri,LV.ro,COIL_H-0.06,open,c.lvMat,secMatLV));
+    c.holder.add(sectorTube(INS.ri,INS.ro,COIL_H+0.06,open,insMat,insMat));
+    c.holder.add(sectorTube(HV.ri,HV.ro,COIL_H,open,c.hvMat,secMatHV));
+  });
+}
+buildCoils(0);
+
+// ---- ligações internas (cabos isolados) ----
+function tube(points,r,mat,parent=active,closed=false){const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)),closed,'catmullrom',0.08);const m=S(new THREE.Mesh(new THREE.TubeGeometry(curve,64,r,10,closed),mat));parent.add(m);return m;}
+const leadsInt=new THREE.Group();active.add(leadsInt);
+LEGX.forEach((x,i)=>{tube([[x+0.2,CY+COIL_H/2,-0.2],[x+0.18,yTop+0.2,-0.2],[x,TY1-0.05,-0.12]],0.016,M.paperLead,leadsInt);});
+[-0.66,-0.22,0.22,0.66].forEach((x,i)=>{const lx=i===0?0:LEGX[i-1];tube([[lx+(i?0.12:0),i?CY+COIL_H/2-0.02:yTop+0.18,i?0.2:0.25],[x,yTop+0.25,0.36],[x,TY1-0.05,0.42]],0.02,M.cuLead,leadsInt);});
+
+/* ---------- comutador de TAP (sem carga) ---------- */
+const tapG=new THREE.Group();active.add(tapG);
+const tapDrum=S(new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,.42,32),new THREE.MeshStandardMaterial({color:0xcfb27a,roughness:.6})));
+tapDrum.position.set(-1.2,CY,0.5);tapG.add(tapDrum);
+const tapShaft=S(new THREE.Mesh(new THREE.CylinderGeometry(.014,.014,TY1-CY,10),M.paperLead));tapShaft.position.set(-1.2,(TY1+CY)/2+0.2,0.5);tapG.add(tapShaft);
+const tapArm=new THREE.Group();tapArm.position.copy(tapDrum.position);tapG.add(tapArm);
+{const a=S(new THREE.Mesh(new THREE.BoxGeometry(.11,.02,.02),M.cuLead));a.position.x=.05;tapArm.add(a);
+ const tip=new THREE.Mesh(new THREE.SphereGeometry(.018,12,8),new THREE.MeshStandardMaterial({color:0xffd27a,emissive:0xffb347,emissiveIntensity:2}));tip.position.x=.1;tapArm.add(tip);}
+const tapLeads=new THREE.Group();tapG.add(tapLeads);
+// faixa de derivações na bobina AT da coluna 1
+const TAPZ={y0:-0.16,y1:0.16};
+const tapBandOn=new THREE.Mesh(new THREE.CylinderGeometry(HV.ro+0.004,HV.ro+0.004,1,48,1,true,-0.75,1.05),new THREE.MeshBasicMaterial({color:0x4cc9f0,transparent:true,opacity:.0,side:THREE.DoubleSide,depthWrite:false}));
+const tapBandOff=new THREE.Mesh(new THREE.CylinderGeometry(HV.ro+0.004,HV.ro+0.004,1,48,1,true,-0.75,1.05),new THREE.MeshBasicMaterial({color:0x334455,transparent:true,opacity:.0,side:THREE.DoubleSide,depthWrite:false}));
+coils[0].holder.parent.add(tapBandOn,tapBandOff);
+tapG.visible=false;
+
+/* ---------- partículas de fluxo ---------- */
+function makePoints(n,color,size){
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(n*3),3));g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(n*3),3));
+  const m=new THREE.PointsMaterial({size,map:glowTex,vertexColors:true,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true});
+  const p=new THREE.Points(g,m);p.frustumCulled=false;return p;
+}
+// cada partícula: segmento (0..2 colunas, 3 culatra sup. esq., 4 sup. dir., 5 inf. esq., 6 inf. dir.), s (0..1), offset lateral, lado
+const NF=900;const flux=makePoints(NF,0xffffff,0.05);active.add(flux);
+const FP=[];for(let i=0;i<NF;i++){const seg=i%7;FP.push({seg,s:Math.random(),o:rnd(-0.155,0.155),side:Math.random()<0.75?1:-1,face:Math.random()});}
+// linhas luminosas do fluxo (tubos com tracejado que corre no sentido de Φ)
+const FL_SEG=[];
+const flVS=`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`;
+const flFS=`uniform float off,amp;uniform vec3 col;varying vec2 vUv;void main(){float d=fract(vUv.x*5.0-off);float dash=smoothstep(0.,.12,d)*smoothstep(.75,.3,d);float a=amp*(.18+.82*dash);gl_FragColor=vec4(col*a*2.2,a);}`;
+const fluxLines=new THREE.Group();active.add(fluxLines);
+for(let sg=0;sg<7;sg++){
+  const mat=new THREE.ShaderMaterial({uniforms:{off:{value:0},amp:{value:0},col:{value:new THREE.Color(0xff8a2a)}},vertexShader:flVS,fragmentShader:flFS,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
+  FL_SEG.push(mat);
+  for(const o of [-0.12,-0.07,-0.025,0.025,0.07,0.12]){
+    let a,b;
+    if(sg<3){const z=halfD(Math.abs(o)*2+0.02)+0.004;a=[LEGX[sg]+o,LEG_Y0-0.06,z];b=[LEGX[sg]+o,LEG_Y1+0.06,z];}
+    else{const top=sg<5,left=(sg===3||sg===5);const dy=o*0.7;const z=halfD(Math.abs(dy)*2+0.02)+0.004;const y=(top?yTop:yBot)+dy;a=[left?LEGX[0]:LEGX[1],y,z];b=[left?LEGX[1]:LEGX[2],y,z];}
+    const g=new THREE.TubeGeometry(new THREE.LineCurve3(new THREE.Vector3(...a),new THREE.Vector3(...b)),20,0.0045,6);
+    fluxLines.add(new THREE.Mesh(g,mat));
+  }
+}
+// partículas de dispersão (fluxo disperso entre AT e BT)
+const NL=700;const leak=makePoints(NL,0xffffff,0.042);active.add(leak);
+const LP=[];for(let i=0;i<NL;i++)LP.push({leg:i%3,s:Math.random(),th:rnd(0,Math.PI*2),r:rnd(INS.ri-0.006,HV.ri-0.002)});
+// alimentação externa (linhas AT e saída BT)
+const feed=new THREE.Group();scene.add(feed);
+const feedCurves=[];
+HVB.forEach((b,i)=>{const x=LEGX[i];const c=new THREE.CatmullRomCurve3([new THREE.Vector3(x,TY1+0.92,-0.12),new THREE.Vector3(x*1.6,TY1+1.5,-1.4),new THREE.Vector3(x*2.6,TY1+2.6,-5.5)]);feedCurves.push({c,kind:'hv',ph:i});
+  feed.add(new THREE.Mesh(new THREE.TubeGeometry(c,40,0.009,6),new THREE.MeshStandardMaterial({color:0xb8bec4,metalness:.9,roughness:.3})));});
+[-0.66,-0.22,0.22,0.66].forEach((x,i)=>{const zc=0.78+i*0.07;const c=new THREE.CatmullRomCurve3([new THREE.Vector3(x,TY1+0.42,0.42),new THREE.Vector3(x,TY1+0.6,0.5),new THREE.Vector3(1.35,TY1+0.6,zc),new THREE.Vector3(1.9,TY1+0.2,zc),new THREE.Vector3(2.05,0.35,zc)],false,'catmullrom',0.2);feedCurves.push({c,kind:i?'lv':'n',ph:i-1});
+  feed.add(S(new THREE.Mesh(new THREE.TubeGeometry(c,60,0.02,8),new THREE.MeshStandardMaterial({color:0x1c1f22,roughness:.6}))));});
+const NFD=feedCurves.length*40;const feedPts=makePoints(NFD,0xffffff,0.05);scene.add(feedPts);
+
+/* ---------- ligações Dyn1 (cena 4) ---------- */
+const vg=new THREE.Group();scene.add(vg);vg.visible=false;
+const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
+const busMat=PH.map(c=>new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:.2,metalness:.5,roughness:.35}));
+const nMat=new THREE.MeshStandardMaterial({color:0x7ee0a0,emissive:0x2fbf6a,emissiveIntensity:.4,roughness:.4});
+const zf=HV.ro+0.06, zb=-(HV.ro+0.06);
+const topY=CY+COIL_H/2, botY=CY-COIL_H/2;
+// AT em delta (Dyn1): coluna 1 entre A e C, coluna 2 entre B e A, coluna 3 entre C e B
+//  nó A = topo col.1 + base col.2 · nó B = topo col.2 + base col.3 · nó C = topo col.3 + base col.1
+const zA=zf+0.05, zC=zf+0.13, y1=topY+0.16, y3=topY+0.3, yT=topY+0.48;
+const xTop=k=>LEGX[k]+0.13, xBot=k=>LEGX[k]-0.13;
+const termHV=[];
+function riserBottom(k,yTo,z,mat){ // da base da bobina k sobe pela frente até yTo
+  tube([[xBot(k),botY+0.04,HV.ro*0.96],[xBot(k),botY-0.03,z],[xBot(k),botY-0.02,z]],0.011,mat,vg);
+  tube([[xBot(k),botY-0.03,z],[xBot(k),yTo,z]],0.011,mat,vg);
+}
+function riserTop(k,yTo,z,mat){tube([[xTop(k),topY-0.04,HV.ro*0.96],[xTop(k),topY+0.04,z],[xTop(k),topY+0.05,z]],0.011,mat,vg);tube([[xTop(k),topY+0.04,z],[xTop(k),yTo,z]],0.011,mat,vg);}
+// fase A
+riserTop(0,y1,zA,busMat[0]);riserBottom(1,y1,zA,busMat[0]);tube([[xTop(0),y1,zA],[xBot(1),y1,zA]],0.011,busMat[0],vg);
+const hA=(xTop(0)+xBot(1))/2;tube([[hA,y1,zA],[hA,yT,zA]],0.011,busMat[0],vg);termHV.push(V3(hA,yT,zA));
+// fase B
+riserTop(1,y1,zA,busMat[1]);riserBottom(2,y1,zA,busMat[1]);tube([[xTop(1),y1,zA],[xBot(2),y1,zA]],0.011,busMat[1],vg);
+const hB=(xTop(1)+xBot(2))/2;tube([[hB,y1,zA],[hB,yT,zA]],0.011,busMat[1],vg);termHV.push(V3(hB,yT,zA));
+// fase C (passa por cima, mais à frente)
+riserTop(2,y3,zC,busMat[2]);riserBottom(0,y3,zC,busMat[2]);tube([[xBot(0),y3,zC],[xTop(2),y3,zC]],0.011,busMat[2],vg);
+tube([[xTop(2),y3,zC],[xTop(2),yT,zC]],0.011,busMat[2],vg);termHV.push(V3(xTop(2),yT,zC));
+termHV.forEach((p,k)=>{const t=S(new THREE.Mesh(new THREE.CylinderGeometry(.028,.028,.05,16),M.porc));t.position.copy(p);vg.add(t);});
+// BT em estrela: bases das 3 bobinas BT na barra de neutro (frente, embaixo); topos para X1..X3 (atrás, em cima)
+const nBarY=botY-0.14, zN=zf+0.02;
+const termLV=[];
+[0,1,2].forEach(k=>{const x=LEGX[k]+0.02;
+  tube([[x,botY+0.06,LV.ro*0.9],[x,botY-0.04,LV.ro+0.02],[x,nBarY,zN]],0.012,nMat,vg);
+  tube([[x,topY-0.06,-LV.ro*0.9],[x,topY+0.08,-LV.ro-0.04],[x,topY+0.14,-HV.ro-0.06],[x,topY+0.22,-HV.ro-0.06]],0.012,busMat[k],vg);
+  termLV.push(V3(x,topY+0.22,-HV.ro-0.06));
+});
+tube([[LEGX[0]-0.05,nBarY,zN],[LEGX[2]+0.3,nBarY,zN]],0.016,nMat,vg);
+tube([[LEGX[2]+0.3,nBarY,zN],[LEGX[2]+0.3,nBarY+0.22,zN]],0.016,nMat,vg);
+termLV.forEach(p=>{const t=S(new THREE.Mesh(new THREE.CylinderGeometry(.022,.022,.04,16),M.porcBT));t.position.copy(p);vg.add(t);});
+const nTerm=V3(LEGX[2]+0.3,nBarY+0.24,zN);
+
+/* ===================== RÓTULOS 3D ===================== */
+const labels=[];
+function label(html,pos,tags,cls='',parent=scene){const d=document.createElement('div');d.className='lbl '+cls;d.innerHTML=html;const o=new CSS2DObject(d);o.position.copy(pos);parent.add(o);labels.push({o,d,tags});return o;}
+const V=(x,y,z)=>new THREE.Vector3(x,y,z);
+label('<b>AT</b> 13,8 kV · H1 H2 H3',V(0,TY1+1.0,-0.12),[1],'at');
+label('<b>BT</b> 480 V · X0 X1 X2 X3',V(0.9,TY1+0.42,0.55),[1]);
+label('Conservador de óleo',V(0.55,TY1+1.1,-0.42),[1]);
+label('Radiadores',V(TW/2+0.5,TY1-0.1,0.6),[1]);
+label('Relé Buchholz',V(0.1,TY1+0.42,-0.1),[1]);
+label('Comutador de TAP sem carga (acionamento)',V(-1.0,TY1+0.22,0.42),[1,5]);
+label('<b>Núcleo</b> 3 colunas · chapas de aço-silício',V(0,yTop+0.16,0.2),[2]);
+label('<b>Enrolamento AT</b> · discos de cobre',V(LEGX[2]+0.36,CY+0.3,0.12),[2],'at');
+label('<b>Enrolamento BT</b> · camadas de cobre',V(LEGX[1]+0.06,CY-0.32,0.24),[2]);
+label('Isolamento (papelão prensado)',V(LEGX[0]+0.06,CY+0.38,0.3),[2,7]);
+label('Circuito magnético (culatras)',V(-0.5,yBot-0.05,0.2),[2]);
+label('Ferragens de aperto',V(1.0,yTop+0.02,0.25),[2]);
+label('<b>Φ</b> fluxo magnético alternado',V(0,yTop+0.16,0.2),[3]);
+label('Sem conexão elétrica AT ↔ BT',V(LEGX[2]+0.3,CY+0.55,0.2),[3]);
+label('<b>Fluxo de dispersão</b> no canal AT–BT',V(LEGX[1]+0.1,CY+0.56,0.3),[7]);
+const lblHV=termHV.map((p,k)=>label(`<b>H${k+1}</b> · fase ${'ABC'[k]}`,p.clone().add(V(0,0.07,0)),[4],'at',vg));
+const lblLV=termLV.map((p,k)=>label(`<b>X${k+1}</b> · ${'abc'[k]}`,p.clone().add(V(0,0.06,0)),[4],'',vg));
+label('<b>X0</b> · neutro',nTerm.clone().add(V(0.05,0.05,0)),[4],'',vg);
+label('<b>Δ</b> primário 13,8 kV',V(-1.25,y3+0.02,zC),[4],'at',vg);
+label('Coluna 1: AT entre <b>A</b> e <b>C</b>',V(LEGX[0]-0.15,botY+0.1,zC+0.05),[4],'at',vg);
+label('<b>Y</b> secundário 480 V + N',V(-0.6,nBarY-0.07,zN),[4],'',vg);
+const lblTap=label('Derivações do enrolamento AT',V(-0.95,CY+0.26,0.42),[5],'at');
+const lblN1=label('',V(-0.74,CY-0.22,0.5),[5],'at');
+const lbl6=[label('',V(0,TY1+1.05,-0.12),[6],'at'),label('',V(0.9,TY1+0.46,0.62),[6]),label('',V(-0.66,TY1+0.46,0.62),[6])];
+
+/* ===================== CENAS ===================== */
+const SC=[
+ {n:1,t:'Visualização externa',p:'Transformador trifásico de potência em subestação de refinaria. Tanque com radiadores, conservador de óleo, buchas de AT e BT.',cam:[5.6,2.9,6.4],tgt:[0,1.35,0],dur:16},
+ {n:2,t:'Corte transversal',p:'O corte revela a parte ativa: núcleo de três colunas, enrolamentos de BT (interno) e AT (externo) e o isolamento entre eles.',cam:[2.3,1.85,3.3],tgt:[0,1.2,0],dur:18},
+ {n:3,t:'Animação eletromagnética',p:'A rede de 13,8 kV magnetiza o núcleo. O fluxo alternado atravessa o BT e induz 480 V. AT e BT não se tocam: a energia passa pelo campo magnético.',cam:[1.0,1.6,3.5],tgt:[0,1.15,0],dur:24},
+ {n:4,t:'Grupo vetorial Dyn1',p:'Primário em Δ, secundário em Y com neutro. A tensão do BT fica 30° atrasada em relação à AT: ponteiro na posição 1 do relógio.',cam:[0.9,2.35,3.7],tgt:[0,1.3,0],dur:26},
+ {n:5,t:'Comutação de TAP',p:'O comutador escolhe a derivação do enrolamento AT. Mudar as espiras efetivas muda a relação e a tensão de saída.',cam:[-0.45,1.35,2.35],tgt:[-0.9,1.1,0.25],dur:22},
+ {n:6,t:'Transformação de tensão',p:'13.800 V → 480 V. Relação de linha 28,75; relação por fase (espiras) 49,8, porque no Δ a tensão de fase é a de linha e na Y é a de linha ÷ √3.',cam:[3.0,2.3,4.4],tgt:[0,1.5,0],dur:22},
+ {n:7,t:'Impedância Z ≈ 6,5%',p:'O fluxo de dispersão entre AT e BT forma a impedância. Ela provoca queda de tensão com carga e limita a corrente de curto-circuito.',cam:[1.25,1.55,3.2],tgt:[0,1.12,0],dur:24},
+];
+const state={sc:0,playing:true,tour:true,t:0,st:0,tap:0,load:0.8,sc7short:false,camAnim:null,user:false};
+const scBtns=document.getElementById('scenes');
+SC.forEach((s,i)=>{const b=document.createElement('button');b.className='btn';b.innerHTML=`${s.n}<span class="t"> ${s.t.split(' ')[0]}</span>`;b.title=s.t;b.onclick=()=>{state.tour=false;syncBtns();go(i);};scBtns.appendChild(b);});
+
+const lerp=(a,b,k)=>a+(b-a)*k, ease=k=>k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2, clamp01=k=>Math.max(0,Math.min(1,k));
+function flyTo(pos,tgt,dur=2.4){const t1=V(...tgt);const asp=innerWidth/innerHeight;const f=asp<1.2?Math.min(2.3,1.25/asp):1;const p1=V(...pos).sub(t1).multiplyScalar(f).add(t1);state.camAnim={p0:camera.position.clone(),t0:controls.target.clone(),p1,t1,k:0,dur};}
+controls.addEventListener('start',()=>{state.camAnim=null;state.user=true;});
+
+/* alvos animáveis por cena */
+const A={cut:0,coilOpen:0,core:1,coilAlpha:1,flux:0,leak:0,vg:0,tank:1,feed:0,inner:0,coilGlow:0};
+const TARGET=[
+ {cut:0,coilOpen:0,core:1,coilAlpha:1,flux:0,leak:0,vg:0,tank:1,feed:0.25,inner:0,coilGlow:0},
+ {cut:1,coilOpen:1.25,core:1,coilAlpha:1,flux:0,leak:0,vg:0,tank:1,feed:0,inner:1,coilGlow:0},
+ {cut:1,coilOpen:3.14,core:1,coilAlpha:.32,flux:1,leak:0,vg:0,tank:1,feed:1,inner:1,coilGlow:1},
+ {cut:1,coilOpen:0.7,core:.18,coilAlpha:1,flux:0,leak:0,vg:1,tank:0,feed:0,inner:1,coilGlow:.25},
+ {cut:1,coilOpen:0,core:1,coilAlpha:1,flux:0,leak:0,vg:0,tank:1,feed:0,inner:1,coilGlow:0},
+ {cut:1,coilOpen:2.2,core:.9,coilAlpha:1,flux:.7,leak:0,vg:0,tank:1,feed:1,inner:1,coilGlow:.7},
+ {cut:1,coilOpen:2.6,core:.9,coilAlpha:1,flux:.3,leak:1,vg:0,tank:1,feed:.5,inner:1,coilGlow:.8},
+];
+
+function go(i){
+  state.sc=i;state.st=0;const s=SC[i];
+  document.getElementById('capN').textContent=`CENA ${s.n} / 7`;
+  document.getElementById('capT').textContent=s.t;
+  document.getElementById('capP').textContent=s.p;
+  [...scBtns.children].forEach((b,k)=>{b.classList.toggle('on',k===i);b.setAttribute('aria-current',k===i?'step':'false');});
+  flyTo(s.cam,s.tgt,i===0?3:2.4);state.user=false;
+  labels.forEach(l=>l.d.classList.toggle('hide',!l.tags.includes(s.n)));
+  tapG.visible=(s.n===5);
+  renderPanel(s.n);
+}
+
+/* ===================== PAINEL ===================== */
+const panel=document.getElementById('panel');
+let wave=null, clockSvg=null;
+function renderPanel(n){
+  let h='';
+  if(n===1) h=`<h3>Dados do equipamento</h3><div class="kv">
+    <span>Tensão primária</span><span>13.800 V</span><span>Ligação primária</span><span>Delta (Δ)</span>
+    <span>Tensão secundária</span><span>480 V</span><span>Ligação secundária</span><span>Estrela (Y) + N</span>
+    <span>Grupo vetorial</span><span>Dyn1</span><span>Impedância</span><span>≈ 6,5 %</span>
+    <span>Potência</span><span>2.500 kVA</span><span>Resfriamento</span><span>ONAN</span>
+    <span>Comutador</span><span>sem carga, no AT</span><span>Derivações</span><span>±2 × 2,5 % (5 pos.)</span></div>
+    <h4>Componentes externos</h4><ul><li>Buchas de AT: H1, H2, H3</li><li>Buchas de BT: X0 (neutro), X1, X2, X3</li><li>Radiadores de painel, conservador e relé Buchholz</li><li>Acionamento do comutador de TAP na tampa (manobra com o transformador desenergizado)</li></ul>
+    <p class="note">Gire a câmera com o dedo ou o mouse; use a roda ou pinça para aproximar.</p>`;
+  if(n===2) h=`<h3>Parte ativa</h3>
+    <p><span class="dot" style="background:#9aa3ab"></span><b>Núcleo de três colunas</b> em chapas de aço-silício, seção escalonada.</p>
+    <p><span class="dot" style="background:#e08a55"></span><b>BT (interno)</b>: mais próximo do núcleo, menor tensão em relação à massa.</p>
+    <p><span class="dot" style="background:#d2ad70"></span><b>Isolamento</b>: cilindro de papelão prensado + canal de óleo.</p>
+    <p><span class="dot" style="background:#c07040"></span><b>AT (externo)</b>: bobina em discos, com as derivações do TAP.</p>
+    <p><span class="dot" style="background:#c39a45"></span><b>Ferragens</b> de aperto e calços prendem o conjunto.</p>
+    <p class="note">A cunha recortada nas bobinas mostra a seção: condutores de cobre envoltos em papel.</p>`;
+  if(n===3) h=`<h3>Indução eletromagnética</h3>
+    <canvas class="wave" id="wave" width="600" height="220" aria-label="Fluxo nas três colunas"></canvas>
+    <p><span class="dot" style="background:${PH[0]}"></span>Φ coluna 1 &nbsp;<span class="dot" style="background:${PH[1]}"></span>Φ coluna 2 &nbsp;<span class="dot" style="background:${PH[2]}"></span>Φ coluna 3</p>
+    <div class="eq">e = N · dΦ/dt<br>Φ<sub>1</sub> + Φ<sub>2</sub> + Φ<sub>3</sub> = 0 (fecha pelas culatras)</div>
+    <ul><li><b style="color:var(--cyan)">Azul</b>: corrente no enrolamento AT (13,8 kV)</li><li><b style="color:var(--amber)">Âmbar</b>: corrente induzida no BT (480 V)</li><li>Entre eles só há isolamento e óleo. A energia atravessa pelo fluxo magnético.</li></ul>
+    <p class="note">60 Hz mostrados em câmera lenta para que o fluxo seja visível.</p>`;
+  if(n===4) h=`<h3>Relógio vetorial</h3>${clockSVG()}
+    <p id="vgStep" style="min-height:58px"></p>
+    <div class="eq">AT (Δ): coluna 1 entre <b>A</b> e <b>C</b> → V<sub>AC</sub> = V<sub>A</sub> ∠−30°<br>BT (Y): fase a acompanha V<sub>AC</sub> → V<sub>a</sub> 30° atrás de V<sub>A</sub></div>
+    <p class="note">Convenção IEC 60076-1: fasor da AT na posição 12; cada hora vale 30°, com o BT atrasado. Dyn1 = 1 × 30° = 30° de atraso.</p>`;
+  if(n===5) h=`<h3>Comutador de TAP</h3>
+    <p>Comutador <b>sem carga</b> no enrolamento AT: muda as <b>espiras efetivas N₁</b>. Só pode ser manobrado com o transformador <b>desenergizado</b>.</p>
+    ${tapRange()?`<div class="ctl"><label for="tapS">Posição do TAP <output id="tapO"></output></label><input type="range" id="tapS" min="1" max="${tapRange().n}" step="1" value="${state.tapPos}"></div><div class="kv" id="tapTab"></div>`
+      :`<div class="ctl"><label for="tapS">Espiras efetivas N₁ <output id="tapO"></output></label><input type="range" id="tapS" min="-1" max="1" step="0.001" value="${state.tap}"></div>`}
+    <div class="ctl"><label for="vin">Tensão aplicada na AT (V)</label><input class="inp" id="vin" type="number" step="10" value="${state.vin}"></div>
+    <div class="eq">V₂ = V₁ × N₂ / N₁<br>V₂ linha = <b id="v2o"></b></div>
+    <h4>Dados da placa</h4>
+    <div class="row3"><div><input id="tN" type="number" min="2" max="41" placeholder="—" value="${state.tN||''}"><span>nº posições</span></div><div><input id="tP" type="number" step="0.5" placeholder="—" value="${state.tPlus||''}"><span>faixa + %</span></div><div><input id="tM" type="number" step="0.5" placeholder="—" value="${state.tMinus||''}"><span>faixa − %</span></div></div>
+    <p class="note" id="tapNote"></p>`;
+  if(n===6) h=`<h3>Relações de transformação</h3>
+    <h4>Tensões de linha</h4><div class="eq">13.800 V ÷ 480 V = <b>28,75</b></div>
+    <h4>Por fase (relação de espiras)</h4><div class="eq">Δ: V<sub>fase AT</sub> = V<sub>linha</sub> = <b>13.800 V</b><br>Y: V<sub>fase BT</sub> = 480 ÷ √3 = <b>277,1 V</b><br>N₁/N₂ = 13.800 ÷ 277,1 = <b>49,80</b></div>
+    <div class="kv"><span>Δ (AT)</span><span>V<sub>F</sub> = V<sub>L</sub> · I<sub>L</sub> = √3·I<sub>F</sub></span><span>Y (BT)</span><span>V<sub>L</sub> = √3·V<sub>F</sub> · I<sub>L</sub> = I<sub>F</sub></span></div>
+    <p class="note">49,80 = 28,75 × √3. A relação de espiras é maior que a de linha por causa da ligação Δ–Y.</p>`;
+  if(n===7) h=`<h3>Impedância percentual</h3>
+    <div class="ctl"><label for="ld">Carga (% da nominal) <output id="ldO"></output></label><input type="range" id="ld" min="0" max="1.2" step="0.01" value="${state.load}"></div>
+    <button class="btn" id="bShort" style="width:100%;justify-content:center">${state.sc7short?'Remover curto-circuito':'Simular curto nos terminais de BT'}</button>
+    <div class="eq" id="zOut"></div>
+    <div class="ctl"><label for="kva">Potência nominal (kVA)</label><input class="inp" id="kva" type="number" placeholder="ex.: informe a placa" value="${state.kva||''}"></div>
+    <div class="kv" id="zAmp"></div>
+    <p class="note">Valores para fonte de potência infinita (corrente simétrica inicial). A queda real com carga depende do fator de potência e da divisão R/X da impedância.</p>`;
+  panel.innerHTML=h;
+  wave=document.getElementById('wave');
+  if(n===5)bindTap(); if(n===7)bindZ();
+}
+state.vin=13800;Object.assign(state,{tN:'5',tPlus:'5',tMinus:'5',tapPos:3,kva:'2500'});
+function clockSVG(){
+  let s=`<svg class="clock" viewBox="-120 -120 240 240" role="img" aria-label="Relógio vetorial Dyn1"><circle r="104" fill="#0a121a" stroke="rgba(160,190,215,.25)"/>`;
+  for(let h=1;h<=12;h++){const a=h/12*Math.PI*2;const x=Math.sin(a),y=-Math.cos(a);s+=`<line x1="${x*94}" y1="${y*94}" x2="${x*102}" y2="${y*102}" stroke="#8ea2b4"/><text x="${x*82}" y="${y*82+4}" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" fill="${h===1?'#ffb347':'#8ea2b4'}" font-weight="${h===1?600:400}">${h}</text>`;}
+  s+=`<g id="ck"></g></svg>`;return s;
+}
+function arrow(x,y,c,w=2.5,id=''){const L=Math.hypot(x,y),ux=x/L,uy=y/L;const hx=x-ux*9,hy=y-uy*9;return `<line x1="0" y1="0" x2="${hx}" y2="${hy}" stroke="${c}" stroke-width="${w}"/><polygon points="${x},${y} ${hx-uy*4.5},${hy+ux*4.5} ${hx+uy*4.5},${hy-ux*4.5}" fill="${c}"/>`;}
+function drawClock(st){
+  const g=document.getElementById('ck');if(!g)return;
+  const P=(deg,r)=>[Math.sin(deg*Math.PI/180)*r,-Math.cos(deg*Math.PI/180)*r]; // 0° = 12h, positivo = sentido horário (atraso)
+  const k=(st%20)/20; let s='';
+  const step = k<.25?0:k<.5?1:k<.75?2:3;
+  // AT: fasores fase-neutro equivalentes A (12h), B (4h), C (8h) e triângulo de linha
+  const A=P(0,66),B=P(120,66),C=P(240,66);
+  s+=`<polygon points="${A} ${B} ${C}" fill="none" stroke="rgba(76,201,240,.35)" stroke-dasharray="3 3"/>`;
+  s+=arrow(...A,PH[0])+arrow(...B,PH[1])+arrow(...C,PH[2]);
+  const L=(deg,r,t,c,w=400)=>{const p=P(deg,r),q=P(deg+90,9);return `<text x="${p[0]+q[0]}" y="${p[1]+q[1]+4}" text-anchor="middle" font-size="11" font-weight="${w}" fill="${c}" font-family="IBM Plex Mono">${t}</text>`;};
+  s+=L(0,48,'A',PH[0])+L(120,48,'B',PH[1])+L(240,48,'C',PH[2]);
+  if(step>=1){ // V_AC (tensão no enrolamento da coluna 1) desenhada a partir do centro
+    const vac=P(30,70*Math.sqrt(3)*0.62);s+=`<g opacity="${step===1?1:.55}">${arrow(...vac,'#4cc9f0',2,'')}<text x="${vac[0]+5}" y="${vac[1]-2}" font-size="10" fill="#4cc9f0" font-family="IBM Plex Mono">V_AC</text></g>`;}
+  if(step>=2){const a=P(30,58),b=P(150,58),c=P(270,58);
+    s+=`<g>${arrow(...a,PH[0],3.2)}${arrow(...b,PH[1],2.4)}${arrow(...c,PH[2],2.4)}<circle r="3" fill="#7ee0a0"/>
+      ${L(30,36,'a',PH[0],600)}${L(150,36,'b',PH[1])}${L(270,36,'c',PH[2])}</g>`;}
+  if(step>=3){const r=40,e=P(30,r);s+=`<path d="M0 ${-r} A ${r} ${r} 0 0 1 ${e[0]} ${e[1]}" fill="none" stroke="#ffb347" stroke-width="2.5"/><text x="9" y="-44" font-size="12" font-weight="600" fill="#ffb347" font-family="IBM Plex Mono">30°</text>`;}
+  g.innerHTML=s;
+  const tx=['<b>1.</b> Fasores da AT: A na posição 12, B e C a 120°.','<b>2.</b> O enrolamento da coluna 1 está entre A e C: sua tensão V<sub>AC</sub> aponta para 1 h (−30°).','<b>3.</b> O BT da mesma coluna acompanha V<sub>AC</sub>: o fasor <b>a</b> cai na posição 1.','<b>4.</b> Defasagem de 30° com o BT atrasado: <b>Dyn1</b>.'][step];
+  const el=document.getElementById('vgStep');if(el&&el.dataset.s!=step){el.dataset.s=step;el.innerHTML=tx;}
+}
+function tapRange(){const n=+state.tN,p=+state.tPlus,m=+state.tMinus;if(n>=2&&p>=0&&m>=0&&(p+m)>0)return{n,p,m};return null;}
+function tapPct(){ // retorno: variação percentual de N1 (positivo = mais espiras)
+  const r=tapRange();
+  if(r){const pos=Math.min(r.n,Math.max(1,state.tapPos));return r.p-(r.p+r.m)*(pos-1)/(r.n-1);}
+  return state.tap*10; // escala didática contínua
+}
+function bindTap(){
+  const s=document.getElementById('tapS'),vin=document.getElementById('vin');
+  s.oninput=()=>{if(tapRange())state.tapPos=+s.value;else state.tap=+s.value;};vin.oninput=()=>{state.vin=+vin.value||13800;};
+  [['tN','tN'],['tP','tPlus'],['tM','tMinus']].forEach(([id,k])=>{document.getElementById(id).onchange=e=>{state[k]=e.target.value;const r=tapRange();if(r)state.tapPos=Math.min(r.n,Math.max(1,Math.round((r.n+1)/2)));buildTapLeads();renderPanel(5);};});
+  buildTapLeads();
+}
+function buildTapLeads(){
+  tapLeads.children.slice().forEach(c=>{tapLeads.remove(c);c.geometry.dispose();});
+  const r=tapRange(); const x0=LEGX[0];
+  const n=r?r.n:0;
+  for(let i=0;i<n;i++){const y=CY+TAPZ.y0+(TAPZ.y1-TAPZ.y0)*i/Math.max(1,n-1);const a=-0.55;
+    const p0=[x0+Math.sin(a)*HV.ro,y,Math.cos(a)*HV.ro];const ang=i/(n-1||1)*Math.PI*1.4-Math.PI*0.7;
+    const p2=[-1.2+Math.cos(ang)*0.078,CY+(i-(n-1)/2)*0.022,0.5-Math.sin(ang)*0.078];
+    tube([p0,[(p0[0]+p2[0])/2,y,0.5],p2],0.006,M.cuLead,tapLeads);}
+  if(!n){ // sem dados de placa: faixa contínua
+    tube([[x0+Math.sin(-0.55)*HV.ro,CY+TAPZ.y0,Math.cos(-0.55)*HV.ro],[-1.02,CY,0.5],[-1.2+0.078,CY,0.5]],0.012,M.cuLead,tapLeads);
+    tube([[x0+Math.sin(-0.55)*HV.ro,CY+TAPZ.y1,Math.cos(-0.55)*HV.ro],[-1.02,CY+0.05,0.5],[-1.2+0.078,CY+0.04,0.5]],0.012,M.cuLead,tapLeads);
+  }
+}
+function bindZ(){
+  const ld=document.getElementById('ld');ld.oninput=()=>{state.load=+ld.value;};
+  document.getElementById('bShort').onclick=e=>{state.sc7short=!state.sc7short;e.target.textContent=state.sc7short?'Remover curto-circuito':'Simular curto nos terminais de BT';};
+  document.getElementById('kva').oninput=e=>{state.kva=e.target.value;};
+}
+
+/* ===================== CONTROLES ===================== */
+const bPlay=document.getElementById('bPlay'),bTour=document.getElementById('bTour');
+function syncBtns(){bPlay.innerHTML=state.playing?'❚❚ <span class="t">Pausar</span>':'▶ <span class="t">Iniciar</span>';bPlay.setAttribute('aria-label',state.playing?'Pausar':'Iniciar');
+  bTour.classList.toggle('on',state.tour);bTour.setAttribute('aria-pressed',state.tour);}
+bPlay.onclick=()=>{state.playing=!state.playing;syncBtns();};
+bTour.onclick=()=>{state.tour=!state.tour;syncBtns();};
+document.getElementById('bRestart').onclick=()=>{state.t=0;state.playing=true;state.tour=true;syncBtns();go(0);};
+const tp=document.getElementById('togglePanel');tp.onclick=()=>{panel.classList.toggle('closed');document.body.classList.toggle('panel-open',!panel.classList.contains('closed'));};
+if(innerWidth<760)panel.classList.add('closed');
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='Space'){e.preventDefault();bPlay.click();}if(e.key==='ArrowRight')go((state.sc+1)%7);if(e.key==='ArrowLeft')go((state.sc+6)%7);});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);labelRenderer.setSize(innerWidth,innerHeight);});
+
+/* ===================== LAÇO DE ANIMAÇÃO ===================== */
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const F_VIS=0.45;      // Hz exibidos (60 Hz em câmera lenta)
+const clock=new THREE.Clock();
+const col=new THREE.Color(), tmp=new THREE.Vector3();
+const progBar=document.getElementById('progBar');
+const fluxColor=new THREE.Color(0xff7a1f), fluxHot=new THREE.Color(0xffe2a0);
+
+function phi(k,th){return Math.sin(th-k*2*Math.PI/3);}
+function updateFlux(th,amp){
+  const pos=flux.geometry.attributes.position.array, c=flux.geometry.attributes.color.array;
+  const p1=phi(0,th),p2=phi(1,th),p3=phi(2,th);
+  const legF=[p1,p2,p3];
+  const segF=[p1,p2,p3, p1,-p3, -p1,p3]; // culatra sup.: esq. leva Φ1 (→ +x), dir. leva Φ3 (→ −x); inf.: inverso
+  const dt=state.playing?Math.min(clock.lastDt,0.05):0;
+  for(let i=0;i<NF;i++){const q=FP[i];const f=segF[q.seg];
+    q.s=(q.s+f*dt*0.55*(q.seg<3?1:1.6)+10)%1;
+    let x,y,z;
+    if(q.seg<3){x=LEGX[q.seg]+q.o;y=lerp(LEG_Y0-0.04,LEG_Y1+0.04,q.s);z=q.side*(halfD(Math.abs(q.o)*2)+0.006);}
+    else{const top=q.seg<5;const left=(q.seg===3||q.seg===5);const xa=left?LEGX[0]:LEGX[1],xb=left?LEGX[1]:LEGX[2];
+      x=lerp(xa,xb,q.s);const dy=q.o*0.75;y=(top?yTop:yBot)+dy;z=q.side*(halfD(Math.abs(dy)*2)+0.006);}
+    pos[i*3]=x;pos[i*3+1]=y;pos[i*3+2]=z;
+    const m=Math.abs(f)*amp; col.copy(fluxColor).lerp(fluxHot,Math.abs(f)*0.6).multiplyScalar(m*1.6);
+    c[i*3]=col.r;c[i*3+1]=col.g;c[i*3+2]=col.b;}
+  flux.geometry.attributes.position.needsUpdate=true;flux.geometry.attributes.color.needsUpdate=true;
+  FL_SEG.forEach((m,i)=>{m.uniforms.off.value+=segF[i]*dt*0.9*(i<3?1:1.4);m.uniforms.amp.value=amp*(0.25+0.75*Math.abs(segF[i]));});
+  coreMats.forEach((m,k)=>m.emissiveIntensity=Math.abs(legF[k])*0.05*amp);yokeMat.emissiveIntensity=0.03*amp;
+}
+function updateLeak(th,amp,cur){
+  const pos=leak.geometry.attributes.position.array,c=leak.geometry.attributes.color.array;const dt=state.playing?Math.min(clock.lastDt,0.05):0;
+  for(let i=0;i<NL;i++){const q=LP[i];const f=Math.sin(th-q.leg*2*Math.PI/3)*cur;q.s=(q.s+f*dt*0.8+10)%1;
+    const x=LEGX[q.leg]+Math.sin(q.th)*q.r,z=Math.cos(q.th)*q.r,y=CY-COIL_H/2+COIL_H*q.s;
+    pos[i*3]=x;pos[i*3+1]=y;pos[i*3+2]=z;const m=Math.min(1.4,Math.abs(f))*amp;c[i*3]=m*1.0;c[i*3+1]=m*0.75;c[i*3+2]=m*0.25;}
+  leak.geometry.attributes.position.needsUpdate=true;leak.geometry.attributes.color.needsUpdate=true;
+}
+function updateFeed(th,amp,v2scale){
+  const pos=feedPts.geometry.attributes.position.array,c=feedPts.geometry.attributes.color.array;let j=0;
+  feedCurves.forEach((fc,ci)=>{const ph=Math.max(0,fc.ph);const inst=Math.sin(th-ph*2*Math.PI/3);
+    for(let k=0;k<40;k++){let s=((k/40)+(state.t*0.25))%1; if(fc.kind==='hv')s=1-s;
+      fc.c.getPointAt(s,tmp);pos[j*3]=tmp.x;pos[j*3+1]=tmp.y;pos[j*3+2]=tmp.z;
+      const m=fc.kind==='n'?0:(0.35+0.65*Math.abs(inst))*amp*(fc.kind==='lv'?v2scale:1);
+      if(fc.kind==='hv'){c[j*3]=0.3*m;c[j*3+1]=0.8*m;c[j*3+2]=1.0*m;}else{c[j*3]=1.0*m;c[j*3+1]=0.65*m;c[j*3+2]=0.2*m;}j++;}});
+  feedPts.geometry.attributes.position.needsUpdate=true;feedPts.geometry.attributes.color.needsUpdate=true;
+}
+function drawWave(th){
+  if(!wave)return;const x=wave.getContext('2d'),W=wave.width,H=wave.height;x.clearRect(0,0,W,H);
+  x.strokeStyle='rgba(160,190,215,.15)';x.lineWidth=1;x.beginPath();x.moveTo(0,H/2);x.lineTo(W,H/2);x.stroke();
+  const span=Math.PI*4;
+  for(let k=0;k<3;k++){x.strokeStyle=PH[k];x.lineWidth=2.5;x.beginPath();for(let i=0;i<=W;i+=3){const a=th-span+span*i/W;const y=H/2-Math.sin(a-k*2*Math.PI/3)*H*0.38;i?x.lineTo(i,y):x.moveTo(i,y);}x.stroke();
+    const y=H/2-Math.sin(th-k*2*Math.PI/3)*H*0.38;x.fillStyle=PH[k];x.beginPath();x.arc(W-4,y,5,0,7);x.fill();}
+  x.fillStyle='#8ea2b4';x.font='20px IBM Plex Mono, monospace';x.fillText('Φ(t)',8,22);
+}
+
+let ready=false;
+function frame(){
+  requestAnimationFrame(frame);
+  const dtReal=Math.min(clock.getDelta(),0.1);clock.lastDt=reduce?dtReal*0.3:dtReal;
+  if(state.playing){state.t+=clock.lastDt;state.st+=dtReal;}
+  const s=SC[state.sc];
+  // tour automático
+  if(state.tour&&state.playing){progBar.style.width=`${clamp01(state.st/s.dur)*100}%`;if(state.st>s.dur)go((state.sc+1)%SC.length);}else progBar.style.width='0';
+  // câmera
+  if(state.camAnim){const a=state.camAnim;a.k=Math.min(1,a.k+dtReal/a.dur);const e=ease(a.k);camera.position.lerpVectors(a.p0,a.p1,e);controls.target.lerpVectors(a.t0,a.t1,e);if(a.k>=1)state.camAnim=null;}
+  controls.autoRotate=(state.sc===0&&state.playing&&!state.camAnim&&!state.user);controls.autoRotateSpeed=0.6;
+  controls.update();
+  // interpolação de estados
+  const tg=TARGET[state.sc];const k=1-Math.pow(0.02,dtReal);
+  for(const key in A)A[key]=lerp(A[key],tg[key],k);
+  // corte do tanque: plano desce
+  const cutY=lerp(TY1+0.2,TY0-0.05,A.cut);cutPlane.constant=cutY;
+  front.visible=ribsFront[0].visible=A.cut<0.995; plate.visible=A.cut<0.2;
+  inner.intensity=A.inner*2.6;
+  buildCoils(Math.round(A.coilOpen*100)/100);
+  coreMats.concat([yokeMat]).forEach(m=>{m.opacity=A.core;m.depthWrite=A.core>0.6;});
+  coils.forEach(c=>{c.hvMat.opacity=c.lvMat.opacity=A.coilAlpha;c.hvMat.depthWrite=c.lvMat.depthWrite=A.coilAlpha>0.9;});secMatHV.opacity=secMatLV.opacity=A.coilAlpha;secMatHV.depthWrite=secMatLV.depthWrite=A.coilAlpha>0.9;insMat.opacity=0.9*A.coilAlpha;
+  tank.traverse(o=>{if(o.isMesh||o.isInstancedMesh)o.visible=A.tank>0.05&&!(o===front&&A.cut>0.995)&&!(ribsFront.includes(o)&&A.cut>0.995);});
+  clampG.visible=leadsInt.visible=A.tank>0.3;
+  vg.visible=A.vg>0.02;vg.traverse(o=>{if(o.material&&o.material.transparent!==undefined){}});
+  feed.visible=A.tank>0.3;
+  // elétrica
+  const th=state.t*F_VIS*Math.PI*2;
+  let v2scale=1; let cur=1;
+  if(state.sc===4){const pct=tapPct();v2scale=1/(1+pct/100);
+    const TR=tapRange();const frac=clamp01((pct+(TR?TR.m:10))/(TR?TR.p+TR.m:20));
+    tapArm.rotation.y=-(frac*2-1)*Math.PI*0.7;tapHandle.rotation.y=-(frac*2-1)*Math.PI*0.7;
+    const yb=CY+TAPZ.y0, ya=CY+TAPZ.y1, ycut=lerp(yb,ya,frac);
+    tapBandOn.position.set(LEGX[0],(yb+ycut)/2,0);tapBandOn.scale.y=Math.max(0.001,ycut-yb);tapBandOn.material.opacity=0.55;
+    tapBandOff.position.set(LEGX[0],(ycut+ya)/2,0);tapBandOff.scale.y=Math.max(0.001,ya-ycut);tapBandOff.material.opacity=0.6;
+    const v2=(state.vin/V1L)*V2L*v2scale; const o=document.getElementById('v2o');
+    if(o){o.textContent=`${fmt(v2,1)} V`;if(!tapRange())document.getElementById('tapO').textContent=`${pct>=0?'+':''}${fmt(pct,2)} %`;
+      if(TR){document.getElementById('tapO').textContent=`${state.tapPos} · ${fmt(V1L*(1+pct/100),0)} V`;
+        const tb=document.getElementById('tapTab');if(tb&&tb.dataset.p!=state.tapPos+'/'+state.vin){tb.dataset.p=state.tapPos+'/'+state.vin;let h='<span><b>Pos.</b></span><span><b>Tensão AT · BT obtida</b></span>';
+          for(let i=1;i<=TR.n;i++){const pc=TR.p-(TR.p+TR.m)*(i-1)/(TR.n-1);const vt=V1L*(1+pc/100);const sel=i===state.tapPos;const st=sel?' style="color:var(--amber)"':'';
+            h+=`<span${st}>${sel?'▶ ':''}${i}${Math.abs(pc)<1e-9?' (nom.)':''}</span><span${st}>${fmt(vt,0)} V · ${fmt(state.vin/vt*V2L,1)} V</span>`;}tb.innerHTML=h;}}
+      document.getElementById('tapNote').innerHTML=TR?`${TR.n} posições · degrau ${fmt((TR.p+TR.m)/(TR.n-1),1)} % · posição 1 = maior tensão de derivação (mais espiras no AT, menor saída no BT).`:'Sem dados de placa, o controle é contínuo e didático (±10%).';}
+    lblN1.element.innerHTML=`N₁ ${pct>=0?'+':''}${fmt(pct,1)} % → <b>${fmt(v2,0)} V</b>`;
+    tapBandOn.visible=tapBandOff.visible=true;
+  } else {tapBandOn.visible=tapBandOff.visible=false;}
+  if(state.sc===6){cur=state.sc7short?1/Z:state.load;
+    const dv=Math.min(cur*Z,1);const o=document.getElementById('zOut');
+    if(o){document.getElementById('ldO').textContent=state.sc7short?'curto':`${fmt(state.load*100,0)} %`;
+      o.innerHTML=state.sc7short?`Curto franco no BT:<br>I<sub>cc</sub> = I<sub>n</sub> ÷ Z = I<sub>n</sub> ÷ 0,065 ≈ <b>15,4 × I<sub>n</sub></b><br>Toda a tensão fica sobre a impedância.`:
+        `|I·Z| = ${fmt(state.load,2)} × 6,5 % = <b>${fmt(state.load*6.5,2)} %</b> de 480 V ≈ <b>${fmt(state.load*0.065*480,1)} V</b><br>Ensaio de curto: 6,5 % de 13,8 kV = <b>897 V</b> na AT fazem circular I<sub>n</sub>.`;
+      const kva=+state.kva;const z=document.getElementById('zAmp');
+      z.innerHTML=kva>0?`<span>I<sub>n</sub> BT</span><span>${fmt(kva*1000/(Math.sqrt(3)*480),0)} A</span><span>I<sub>n</sub> AT</span><span>${fmt(kva*1000/(Math.sqrt(3)*13800),1)} A</span><span>I<sub>cc</sub> BT (≈ I<sub>n</sub>/Z)</span><span>${fmt(kva/(Math.sqrt(3)*0.48*Z)/1000,1)} kA</span>`:'';}
+  }
+  const ampFlux=A.flux, glow=A.coilGlow;
+  if(ampFlux>0.01||A.leak>0.01){flux.visible=ampFlux>0.01;leak.visible=A.leak>0.01;}else{flux.visible=leak.visible=false;}
+  fluxLines.visible=flux.visible;
+  if(flux.visible)updateFlux(th,ampFlux);else{coreMats.forEach(m=>m.emissiveIntensity=0);yokeMat.emissiveIntensity=0;}
+  if(leak.visible)updateLeak(th,A.leak,Math.min(cur,3));
+  insMat.emissiveIntensity=A.leak*0.45*(0.6+0.4*Math.abs(Math.sin(th)));
+  feedPts.visible=A.feed>0.02&&feed.visible;if(feedPts.visible)updateFeed(th,A.feed,v2scale);
+  const lv=Math.min(cur,2.5);
+  coils.forEach((c,kk)=>{const vgPh= state.sc===3?[0,1,2][kk]:kk;const i1=Math.abs(Math.sin(th-vgPh*2*Math.PI/3-0.5));
+    c.hvMat.emissiveIntensity=glow*i1*0.16*(state.sc===6?Math.min(lv,1.5):1);c.lvMat.emissiveIntensity=glow*i1*0.22*(state.sc===6?Math.min(lv,1.5):1)*v2scale;});
+  busMat.forEach((m,kk)=>m.emissiveIntensity=0.12+0.25*Math.abs(Math.sin(th-kk*2*Math.PI/3)));
+  if(state.sc===2)drawWave(th);
+  if(state.sc===3)drawClock(state.st);
+  if(state.sc===5){
+    lbl6[0].element.innerHTML=`<b>AT</b> V<sub>L</sub> = V<sub>F</sub> = 13.800 V (Δ)`;
+    lbl6[1].element.innerHTML=`<b>BT</b> V<sub>L</sub> = 480 V · V<sub>F</sub> = 277,1 V (Y)`;
+    lbl6[2].element.innerHTML=`<b>X0</b> neutro · fase–neutro 277 V`;
+  }
+  // ambiente
+  const fl=env.userData.flame;fl.scale.y=1.8+Math.sin(state.t*9)*0.25+Math.sin(state.t*23)*0.12;env.userData.fLight.intensity=36+Math.sin(state.t*13)*6;
+  composer.render();labelRenderer.render(scene,camera);
+  if(!ready){ready=true;document.getElementById('loading').classList.add('gone');}
+}
+clock.lastDt=0;
+go(0);syncBtns();frame();
+window.__app={state,go,finishCam(){const a=state.camAnim;if(a){camera.position.copy(a.p1);controls.target.copy(a.t1);state.camAnim=null;}for(const k in A)A[k]=TARGET[state.sc][k];}};
+</script>
+
+</body></html>
